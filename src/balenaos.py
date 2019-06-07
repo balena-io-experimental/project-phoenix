@@ -1,5 +1,14 @@
 import dbus
 
+import gi
+
+gi.require_version('NM', '1.0')
+gi.require_version('GLib', '2.0')
+gi.require_version('ModemManager', '1.0')
+
+from gi.repository import NM, GLib
+from gi.repository import Gio, ModemManager
+
 class BalenaOS:
     class __BalenaOS:
         def __init__(self, arg):
@@ -52,6 +61,11 @@ class BalenaOS:
         etcOsRelease = self.__get_host_etc_os_release()
         return str(etcOsRelease.get('VARIANT'))
 
+    def print_os_info(self):
+        print("Device: ", self.get_device_type())
+        print("OS Version: ", self.get_os_version())
+        print("OS Variant: ", self.get_os_variant())
+
     def restart_service(self, serviceName):
         return self.manager.RestartUnit(serviceName, 'fail')
 
@@ -60,6 +74,38 @@ class BalenaOS:
     
     def restart_network_manager(self):
         self.restart_service('NetworkManager.service')
+
+class OsNetwork:
+    class __OsNetwork:
+        def __init__(self, arg):
+            self.val = arg
+            self.client = NM.Client.new(None)
+        def __str__(self):
+            return repr(self) + self.val
+    instance = None
+
+    def __init__(self, arg):
+        if not OsNetwork.instance:
+            OsNetwork.instance = OsNetwork.__OsNetwork(arg)
+        else:
+            OsNetwork.instance.val = arg
+
+    def __getattr__(self, name):
+        return getattr(self.instance, name)
+    
+    def primary_connection_changed(self, instance, param):
+        primary_connection = instance.get_property(param.name)
+        self.print_addresses(primary_connection)
+
+    def print_addresses(self, active_connection):
+        ip4_config = active_connection.get_ip4_config()
+
+        addrs = ip4_config.get_addresses()
+
+        for addr in addrs:
+            addr = addr.get_address()
+
+            print("Primary IP address: ", addr)
 
 if __name__ == '__main__':
     os = BalenaOS('balenaOS dbus interface')

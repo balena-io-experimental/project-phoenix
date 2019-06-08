@@ -12,6 +12,7 @@ from gi.repository import Gio, ModemManager
 class BalenaOS:
     class __BalenaOS:
         def __init__(self, arg):
+            """Initialize a balenaOS singleton"""
             self.val = arg
             #Define system bus
             self.sysbus = dbus.SystemBus()
@@ -35,36 +36,45 @@ class BalenaOS:
         return getattr(self.instance, name)
 
     def __get_host_etc_os_release(self):
+        """Read the hostOS /etc/os-release"""
         return self.machine.GetMachineOSRelease('.host')
 
     def get_os_version(self):
+        """Return the hostOS version string"""
         etcOsRelease = self.__get_host_etc_os_release()
         return str(etcOsRelease.get('VERSION'))
 
-    def get_device_type(self):
-        etcOsRelease = self.__get_host_etc_os_release()
-        return str(etcOsRelease.get('MACHINE'))
-
     def get_os_pretty_name(self):
+        """Return the hostOS version string"""
         etcOsRelease = self.__get_host_etc_os_release()
         return str(etcOsRelease.get('PRETTY_NAME'))
+
+    def get_device_type(self):
+        """Return the Balena Device Type string"""
+        etcOsRelease = self.__get_host_etc_os_release()
+        return str(etcOsRelease.get('MACHINE'))
     
     def get_os_variant(self):
+        """Return the hostOS variant type"""
         etcOsRelease = self.__get_host_etc_os_release()
         return str(etcOsRelease.get('VARIANT'))
 
     def print_os_info(self):
+        """Print basic OS info"""
         print("Device: ", self.get_device_type())
         print("OS Version: ", self.get_os_version())
         print("OS Variant: ", self.get_os_variant())
 
     def restart_service(self, serviceName):
+        """Restart a systemd service in the hostOS"""
         return self.manager.RestartUnit(serviceName, 'fail')
 
     def restart_modem_manager(self):
+        """Restart the hostOS ModemManager"""
         self.restart_service('ModemManager.service')
     
     def restart_network_manager(self):
+        """Restart hostOS NetworkManager service"""
         self.restart_service('NetworkManager.service')
 
 class OsNetwork:
@@ -73,7 +83,7 @@ class OsNetwork:
     def getInstance():
         """ Static access method. """
         if OsNetwork.instance == None:
-            OsNetwork()
+            OsNetwork('')
         return OsNetwork.instance
 
     class __OsNetwork:
@@ -90,8 +100,7 @@ class OsNetwork:
             self.modem = modem
 
         def __str__(self):
-            return repr(self) + self.val
-    
+            return repr(self) + self.val    
 
     def __init__(self, arg):
         if not OsNetwork.instance:
@@ -103,10 +112,12 @@ class OsNetwork:
         return getattr(self.instance, name)
     
     def get_connectivity_state(self):
+        """Get NetworkManager Connectivity State"""
         state = self.client.get_state()
         return self.__get_nm_state_string(str(int(state)))
 
     def __get_nm_state_string(self, state):
+        """Map integers to NM state strings"""
         return {
             '70': 'CONNECTED_GLOBAL',
             '60': 'CONNECTED_SITE',
@@ -119,6 +130,7 @@ class OsNetwork:
         }.get(state, 'UNKNOWN')
     
     def __get_connectivity_state_string(self, state):
+        """Map integers to connectivity state strings"""
         return {
             '0': 'UNKNOWN',
             '1': 'NONE',
@@ -128,15 +140,19 @@ class OsNetwork:
         }.get(state, 'UNKNOWN')
 
     def connectivity_changed(self, instance, param):
+        """Call back on connectivity state change"""
+        #TODO: move this of out class
         connectivity = int(instance.get_property(param.name))
         print('[Notify] Connectivity Changed: ', self.__get_connectivity_state_string(str(connectivity)))
         #TODO: build logic to restart NM or MM to ensure connectivity.
 
     def primary_connection_changed(self, instance, param):
+        """Call back for when primary connection changes"""
         primary_connection = instance.get_property(param.name)
         self.print_addresses(primary_connection)
 
     def print_addresses(self, active_connection):
+        """Print IPv4 Address of a connection"""
         if active_connection:
             ip4_config = active_connection.get_ip4_config()
             addrs = ip4_config.get_addresses()
@@ -148,9 +164,11 @@ class OsNetwork:
             print("No active connection")
 
     def send_modem_at_command(self, command):
+        """Send AT command to the modem"""
         return self.modem.command_sync(command, 10, None)
 
     def print_modem_info(self):
+        """Print out basic modem info"""
         if self.modem:
             print("Modem Manufacturer: ", self.modem.get_manufacturer())
             print("Modem Signal: ", self.modem.get_signal_quality())
@@ -160,6 +178,7 @@ class OsNetwork:
 
 # Util functions
 def on_modem_added(manager, obj):
+    """Updates OsNetwork.modem instance when Modem is detected"""
     net = OsNetwork.getInstance()
     modem = None
     for obj in manager.get_objects():

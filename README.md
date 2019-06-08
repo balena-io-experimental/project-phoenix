@@ -1,17 +1,6 @@
 
 https://wiki.freedesktop.org/www/Software/systemd/dbus/ 
 
-#restart NetworkManager:
+https://lazka.github.io/pgi-docs/#NM-1.0
 
-```
-import dbus
-sysbus = dbus.SystemBus()
-systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
-
-machined1 = sysbus.get_object('org.freedesktop.machine1', '/org/freedesktop/machine1')
-machine = dbus.Interface(machined1, 'org.freedesktop.machine1.Manager')
-
-os-release = machine.GetMachineOSRelease('.host')
-job = manager.RestartUnit('NetworkManager.service', 'fail')
-```
+https://lazka.github.io/pgi-docs/#ModemManager-1.0

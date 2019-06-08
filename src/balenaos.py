@@ -83,6 +83,7 @@ class OsNetwork:
             modem_connection = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
             self.modem_manager = ModemManager.Manager.new_sync(modem_connection, Gio.DBusObjectManagerClientFlags.DO_NOT_AUTO_START, None)
             #TODO: improve how we get primary modem
+            modem = None
             for obj in self.modem_manager.get_objects():
                 modem = obj.get_modem()
             self.modem = modem

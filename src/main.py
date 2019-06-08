@@ -5,8 +5,8 @@ gi.require_version('GLib', '2.0')
 from gi.repository import GLib
 try:
     from balenaos import BalenaOS, OsNetwork
-except ImportError as e:
-    print("Error: ", e)
+except:
+    print("Error loading modules")
 
 #Create balenaOS singleton
 os = BalenaOS('OS dbus interface')
@@ -25,6 +25,7 @@ def main():
 
     #Show device and OS info
     os.print_os_info()
+    
     #Show the current modem info
     net.print_modem_info()
 
@@ -39,6 +40,7 @@ def main():
 
     print("connection state: ", net.get_connectivity_state())
 
+    #periodically print info
     GLib.timeout_add_seconds(10, print_info)
 
     GLib.MainLoop().run()

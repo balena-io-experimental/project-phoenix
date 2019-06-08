@@ -2,7 +2,7 @@
 
 export DBUS_SYSTEM_BUS_ADDRESS=unix:path=/host/run/dbus/system_bus_socket 
 
-echo "======================================================="
+echo "======================Phoenix========================="
 python3 src/main.py
 
 while true

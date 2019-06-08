@@ -13,22 +13,17 @@ class BalenaOS:
     class __BalenaOS:
         def __init__(self, arg):
             self.val = arg
+            #Define system bus
+            self.sysbus = dbus.SystemBus()
+            #Setup dbus for systemd
+            self.systemd1 = self.sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
+            self.manager = dbus.Interface(self.systemd1, 'org.freedesktop.systemd1.Manager')
+            #Setup dbus for machined
+            self.machined1 = self.sysbus.get_object('org.freedesktop.machine1', '/org/freedesktop/machine1')
+            self.machine = dbus.Interface(self.machined1, 'org.freedesktop.machine1.Manager')
         def __str__(self):
             return repr(self) + self.val
     instance = None
-
-    try:
-        #Define system bus
-        sysbus = dbus.SystemBus()
-        #Setup dbus for systemd
-        systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-        manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
-       #Setup dbus for machined
-        machined1 = sysbus.get_object('org.freedesktop.machine1', '/org/freedesktop/machine1')
-        machine = dbus.Interface(machined1, 'org.freedesktop.machine1.Manager')
-    except:
-        print("Cannot connect to OS system dbus")
-        raise Exception('Cannot connect to OS system dbus, have you set the correct path? https://www.balena.io/docs/learn/develop/runtime/#dbus-communication-with-host-os')
 
     def __init__(self, arg):
         if not BalenaOS.instance:
@@ -73,6 +68,14 @@ class BalenaOS:
         self.restart_service('NetworkManager.service')
 
 class OsNetwork:
+    instance = None
+    @staticmethod 
+    def getInstance():
+        """ Static access method. """
+        if OsNetwork.instance == None:
+            OsNetwork()
+        return OsNetwork.instance
+
     class __OsNetwork:
         def __init__(self, arg):
             self.val = arg
@@ -83,12 +86,12 @@ class OsNetwork:
             modem = None
             for obj in self.modem_manager.get_objects():
                 modem = obj.get_modem()
-            self.object_added_id = self.modem_manager.connect('object-added', OsNetwork.on_modem_added)
+            self.object_added_id = self.modem_manager.connect('object-added', on_modem_added)
             self.modem = modem
 
         def __str__(self):
             return repr(self) + self.val
-    instance = None
+    
 
     def __init__(self, arg):
         if not OsNetwork.instance:
@@ -147,21 +150,6 @@ class OsNetwork:
     def send_modem_at_command(self, command):
         return self.modem.command_sync(command, 10, None)
 
-    def on_modem_added(self, manager):
-        modem_connection = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
-        self.modem_manager = ModemManager.Manager.new_sync(modem_connection, Gio.DBusObjectManagerClientFlags.DO_NOT_AUTO_START, None)
-        modem = None
-        for obj in self.modem_manager.get_objects():
-            modem = obj.get_modem()
-        self.modem = modem
-
-        print('[Notify] %s (%s) modem managed by ModemManager [%s]: %s' %
-              (modem.get_manufacturer(),
-               modem.get_model(),
-               modem.get_equipment_identifier(),
-               obj.get_object_path()))
-
-
     def print_modem_info(self):
         if self.modem:
             print("Modem Manufacturer: ", self.modem.get_manufacturer())
@@ -169,6 +157,20 @@ class OsNetwork:
             print("Modem Model: ", self.modem.get_model())
         else:
             print("No modem available")
+
+# Util functions
+def on_modem_added(manager, obj):
+    net = OsNetwork.getInstance()
+    modem = None
+    for obj in manager.get_objects():
+        modem = obj.get_modem()
+    net.modem = modem
+
+    print('[Notify] %s (%s) modem managed by ModemManager [%s]: %s' %
+            (modem.get_manufacturer(),
+            modem.get_model(),
+            modem.get_equipment_identifier(),
+            obj.get_object_path()))
 
 if __name__ == '__main__':
     os = BalenaOS('balenaOS dbus interface')

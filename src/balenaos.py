@@ -80,6 +80,13 @@ class OsNetwork:
         def __init__(self, arg):
             self.val = arg
             self.client = NM.Client.new(None)
+            modem_connection = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+            self.modem_manager = ModemManager.Manager.new_sync(modem_connection, Gio.DBusObjectManagerClientFlags.DO_NOT_AUTO_START, None)
+            #TODO: improve how we get primary modem
+            for obj in self.modem_manager.get_objects():
+                modem = obj.get_modem()
+            self.modem = modem
+
         def __str__(self):
             return repr(self) + self.val
     instance = None
@@ -99,13 +106,19 @@ class OsNetwork:
 
     def print_addresses(self, active_connection):
         ip4_config = active_connection.get_ip4_config()
-
         addrs = ip4_config.get_addresses()
 
         for addr in addrs:
             addr = addr.get_address()
-
             print("Primary IP address: ", addr)
+
+    def send_modem_at_command(self, command):
+        return self.modem.command_sync(command, 10, None)
+
+    def print_modem_info(self):
+        print("Modem Manufacturer: ", self.modem.get_manufacturer())
+        print("Modem Signal: ", self.modem.get_signal_quality())
+        print("Modem Model: ", self.modem.get_model())
 
 if __name__ == '__main__':
     os = BalenaOS('balenaOS dbus interface')

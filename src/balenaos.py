@@ -100,11 +100,42 @@ class OsNetwork:
     def __getattr__(self, name):
         return getattr(self.instance, name)
     
+    def get_connectivity_state(self):
+        state = self.client.get_state()
+        return self.__get_nm_state_string(str(int(state)))
+
+    def __get_nm_state_string(self, state):
+        return {
+            '70': 'CONNECTED_GLOBAL',
+            '60': 'CONNECTED_SITE',
+            '50': 'CONNECTED_LOCAL',
+            '40': 'CONNECTING',
+            '30': 'DISCONNECTING',
+            '20': 'DISCONNECTED',
+            '10': 'ASLEEP',
+            '0' : 'UNKNOWN',
+        }.get(state, 'UNKNOWN')
+    
+    def __get_connectivity_state_string(self, state):
+        return {
+            '0': 'UNKNOWN',
+            '1': 'NONE',
+            '2': 'PORTAL',
+            '3': 'LIMITED',
+            '4': 'FULL',
+        }.get(state, 'UNKNOWN')
+
+    def connectivity_changed(self, instance, param):
+        connectivity = int(instance.get_property(param.name))
+        print('Connectivity Changed: ', self.__get_connectivity_state_string(str(connectivity)))
+        #TODO: build logic to restart NM or MM to ensure connectivity.
+
     def primary_connection_changed(self, instance, param):
         primary_connection = instance.get_property(param.name)
         self.print_addresses(primary_connection)
 
     def print_addresses(self, active_connection):
+        #TODO: ensure active_connection is not none, AttributeError: 'NoneType' object has no attribute 'get_ip4_config'
         ip4_config = active_connection.get_ip4_config()
         addrs = ip4_config.get_addresses()
 

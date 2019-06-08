@@ -11,7 +11,7 @@ def main():
     net = OsNetwork('Network interface')
     
     #get a NM client
-    client = net.client
+    nm = net.client
     
     #get a modem instance
     modem = net.modem
@@ -22,10 +22,15 @@ def main():
     net.print_modem_info()
 
     #listen for changes on the default connection
-    client.connect('notify::primary-connection', net.primary_connection_changed)
-    primary_connection = client.get_primary_connection()
+    nm.connect('notify::primary-connection', net.primary_connection_changed)
+
+    nm.connect('notify::connectivity', net.connectivity_changed)
+
+    primary_connection = nm.get_primary_connection()
 
     net.print_addresses(primary_connection)
+
+    print("connection state: ", net.get_connectivity_state())
 
     GLib.MainLoop().run()
 

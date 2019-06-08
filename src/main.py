@@ -24,11 +24,11 @@ def main():
     #listen for changes on the default connection
     nm.connect('notify::primary-connection', net.primary_connection_changed)
 
+    #Listen for changes to connectivity level
     nm.connect('notify::connectivity', net.connectivity_changed)
 
-    primary_connection = nm.get_primary_connection()
-
-    net.print_addresses(primary_connection)
+    #Show primary connections IP address
+    net.print_addresses(nm.get_primary_connection())
 
     print("connection state: ", net.get_connectivity_state())
 

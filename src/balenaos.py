@@ -16,28 +16,25 @@ class BalenaOS:
         def __str__(self):
             return repr(self) + self.val
     instance = None
+
     try:
         #Define system bus
         sysbus = dbus.SystemBus()
         #Setup dbus for systemd
         systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
         manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
-        #Setup dbus for machined
+       #Setup dbus for machined
         machined1 = sysbus.get_object('org.freedesktop.machine1', '/org/freedesktop/machine1')
         machine = dbus.Interface(machined1, 'org.freedesktop.machine1.Manager')
     except:
         print("Cannot connect to OS system dbus")
         raise Exception('Cannot connect to OS system dbus, have you set the correct path? https://www.balena.io/docs/learn/develop/runtime/#dbus-communication-with-host-os')
-   
+
     def __init__(self, arg):
         if not BalenaOS.instance:
             BalenaOS.instance = BalenaOS.__BalenaOS(arg)
         else:
             BalenaOS.instance.val = arg
-        
-        sysbus = dbus.SystemBus()
-        systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-        manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
 
     def __getattr__(self, name):
         return getattr(self.instance, name)
@@ -86,6 +83,7 @@ class OsNetwork:
             modem = None
             for obj in self.modem_manager.get_objects():
                 modem = obj.get_modem()
+            self.object_added_id = self.modem_manager.connect('object-added', OsNetwork.on_modem_added)
             self.modem = modem
 
         def __str__(self):
@@ -128,7 +126,7 @@ class OsNetwork:
 
     def connectivity_changed(self, instance, param):
         connectivity = int(instance.get_property(param.name))
-        print('Connectivity Changed: ', self.__get_connectivity_state_string(str(connectivity)))
+        print('[Notify] Connectivity Changed: ', self.__get_connectivity_state_string(str(connectivity)))
         #TODO: build logic to restart NM or MM to ensure connectivity.
 
     def primary_connection_changed(self, instance, param):
@@ -136,21 +134,41 @@ class OsNetwork:
         self.print_addresses(primary_connection)
 
     def print_addresses(self, active_connection):
-        #TODO: ensure active_connection is not none, AttributeError: 'NoneType' object has no attribute 'get_ip4_config'
-        ip4_config = active_connection.get_ip4_config()
-        addrs = ip4_config.get_addresses()
+        if active_connection:
+            ip4_config = active_connection.get_ip4_config()
+            addrs = ip4_config.get_addresses()
 
-        for addr in addrs:
-            addr = addr.get_address()
-            print("Primary IP address: ", addr)
+            for addr in addrs:
+                addr = addr.get_address()
+                print("Primary IP address: ", addr)
+        else:
+            print("No active connection")
 
     def send_modem_at_command(self, command):
         return self.modem.command_sync(command, 10, None)
 
+    def on_modem_added(self, manager):
+        modem_connection = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+        self.modem_manager = ModemManager.Manager.new_sync(modem_connection, Gio.DBusObjectManagerClientFlags.DO_NOT_AUTO_START, None)
+        modem = None
+        for obj in self.modem_manager.get_objects():
+            modem = obj.get_modem()
+        self.modem = modem
+
+        print('[Notify] %s (%s) modem managed by ModemManager [%s]: %s' %
+              (modem.get_manufacturer(),
+               modem.get_model(),
+               modem.get_equipment_identifier(),
+               obj.get_object_path()))
+
+
     def print_modem_info(self):
-        print("Modem Manufacturer: ", self.modem.get_manufacturer())
-        print("Modem Signal: ", self.modem.get_signal_quality())
-        print("Modem Model: ", self.modem.get_model())
+        if self.modem:
+            print("Modem Manufacturer: ", self.modem.get_manufacturer())
+            print("Modem Signal: ", self.modem.get_signal_quality())
+            print("Modem Model: ", self.modem.get_model())
+        else:
+            print("No modem available")
 
 if __name__ == '__main__':
     os = BalenaOS('balenaOS dbus interface')

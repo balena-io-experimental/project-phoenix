@@ -15,3 +15,11 @@
 https://wiki.freedesktop.org/www/Software/systemd/dbus/ 
 https://lazka.github.io/pgi-docs/#NM-1.0
 https://lazka.github.io/pgi-docs/#ModemManager-1.0
+
+mmcli -m 0 --location-set-supl-server="supl.google.com:7275"
+
+mmcli -m 0 --location-enable-gps-raw --location-enable-gps-nmea --location-enable-agps 
+
+## Get SIM imsi:
+
+`mmcli -m 0 --command="AT+CIMI"`

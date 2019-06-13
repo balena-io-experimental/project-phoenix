@@ -1,0 +1,11 @@
+version: '2.1'
+networks: {}
+services:
+  main:
+    build:
+      context: ./phoenix
+    tty: true
+    restart: always
+    labels:
+      io.resin.features.dbus: '1'
+      io.resin.features.supervisor-api: '1'

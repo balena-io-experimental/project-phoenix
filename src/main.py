@@ -41,7 +41,7 @@ def main():
     print("connection state: ", net.get_connectivity_state())
 
     #periodically print info
-    GLib.timeout_add_seconds(10, print_info)
+    GLib.timeout_add_seconds(180, print_info)
 
     GLib.MainLoop().run()
 

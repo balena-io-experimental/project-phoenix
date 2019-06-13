@@ -23,3 +23,16 @@ mmcli -m 0 --location-enable-gps-raw --location-enable-gps-nmea --location-enabl
 ## Get SIM imsi:
 
 `mmcli -m 0 --command="AT+CIMI"`
+
+## Reset usb modem:
+```
+RUN install_packages libusb
+RUN pip3 install pyusb
+```
+
+```
+#!/usr/bin/python
+from usb.core import find as finddev
+dev = finddev(idVendor=0x0424, idProduct=0x9514)
+dev.reset()
+```

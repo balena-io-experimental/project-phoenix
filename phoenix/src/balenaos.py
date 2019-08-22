@@ -1,5 +1,5 @@
 import dbus
-
+import os
 import gi
 
 gi.require_version('NM', '1.0')
@@ -59,11 +59,16 @@ class BalenaOS:
         etcOsRelease = self.__get_host_etc_os_release()
         return str(etcOsRelease.get('VARIANT'))
 
+    def get_os_kernel_version(self):
+        """Return the hostOS kernel version"""
+        return str(os.uname().release)
+
     def print_os_info(self):
         """Print basic OS info"""
         print("Device: ", self.get_device_type())
         print("OS Version: ", self.get_os_version())
         print("OS Variant: ", self.get_os_variant())
+        print("Kernel Version: ", self.get_os_kernel_version())
 
     def restart_service(self, serviceName):
         """Restart a systemd service in the hostOS"""
@@ -98,6 +103,15 @@ class OsNetwork:
                 modem = obj.get_modem()
             self.object_added_id = self.modem_manager.connect('object-added', on_modem_added)
             self.modem = modem
+
+            #TODO: Improve way we get primary connection
+            default_active = None
+            for c in self.client.get_active_connections():
+                if c.get_default():
+                    default_active = c
+            self.default_active_connection = default_active
+            self.client.connect('notify::primary-connection', on_default_connection_change)
+            self.connectionType = default_active.get_connection_type()
 
         def __str__(self):
             return repr(self) + self.val    
@@ -150,6 +164,27 @@ class OsNetwork:
         """Call back for when primary connection changes"""
         primary_connection = instance.get_property(param.name)
         self.print_addresses(primary_connection)
+        if primary_connection:
+            self.connectionType = primary_connection.get_connection_type()
+            print("connection type: ", self.connectionType)
+        else:
+            print("No connection type")
+
+    def print_active_connections(self, activeConnections):
+        """Prints out all the currently active connections"""
+        for c in activeConnections:
+            id = c.get_id()
+            cType = c.get_connection_type()
+            isDefault = c.get_default()
+            try:
+                ipv4 = c.get_ip4_config().get_addresses()[0].get_address()
+            except:
+                ipv4 = None
+            
+
+            if cType != "bridge":
+                out = f"Name: {id}, type: {cType}, isDefault: {isDefault}, ip: {ipv4}"
+                print(out)
 
     def print_addresses(self, active_connection):
         """Print IPv4 Address of a connection"""
@@ -190,6 +225,17 @@ def on_modem_added(manager, obj):
             modem.get_model(),
             modem.get_equipment_identifier(),
             obj.get_object_path()))
+
+def on_default_connection_change(instance, param):
+    """Call back for when primary connection changes"""
+    primary_connection = instance.get_property(param.name)
+    net = OsNetwork.getInstance()
+    net.default_active_connection = primary_connection
+    if primary_connection:
+        connectionType = primary_connection.get_connection_type()
+        print("[Notify] Primary connection type changed to: ", connectionType)
+    else:
+        print("[Notify] There is no primary connection")
 
 if __name__ == '__main__':
     os = BalenaOS('balenaOS dbus interface')

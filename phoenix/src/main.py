@@ -16,9 +16,10 @@ nm = net.client
 
 def print_info():
     print("=======================================================\n")
-    print("connection state: ", net.get_connectivity_state())
+    print("Connection State: ", net.get_connectivity_state())
     net.print_addresses(nm.get_primary_connection())
     net.print_modem_info()
+    print("Connection Type: ", net.connectionType)
     return True
 
 def main():
@@ -26,22 +27,18 @@ def main():
     #Show device and OS info
     os.print_os_info()
     
-    #Show the current modem info
-    net.print_modem_info()
-
-    #listen for changes on the default connection
-    nm.connect('notify::primary-connection', net.primary_connection_changed)
-
     #Listen for changes to connectivity level
     nm.connect('notify::connectivity', net.connectivity_changed)
 
-    #Show primary connections IP address
-    net.print_addresses(nm.get_primary_connection())
+    print_info()
 
-    print("connection state: ", net.get_connectivity_state())
-
+    print("=======================================================\n")
+    print("Active Connections:")
+    activeConnections = nm.get_active_connections()
+    net.print_active_connections(activeConnections)
+    
     #periodically print info
-    GLib.timeout_add_seconds(180, print_info)
+    GLib.timeout_add_seconds(60, print_info)
 
     GLib.MainLoop().run()
 

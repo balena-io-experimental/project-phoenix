@@ -7,6 +7,6 @@ python3 src/main.py
 
 while true
 do
-	echo "Press [CTRL+C] to stop.."
+	echo "Waiting in infinite loop..."
 	sleep 30
 done
